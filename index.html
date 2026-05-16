@@ -48,7 +48,6 @@ body {
 /* ── STREAM PANEL ── */
 .stream-panel { grid-column:2; grid-row:1; background:#000; display:flex; flex-direction:column; overflow:hidden; }
 
-/* Controls bar */
 .stream-controls {
   flex-shrink:0; background:rgba(5,2,12,.97);
   border-bottom:1px solid rgba(157,110,247,.18);
@@ -67,7 +66,6 @@ body {
 .ctrl-input:focus { border-color:rgba(157,110,247,.55); }
 .ctrl-input:disabled { opacity:.4; }
 
-/* Tags pill box */
 .tags-box {
   flex:1; display:flex; flex-wrap:wrap; gap:5px; align-items:center;
   min-height:32px; background:rgba(157,110,247,.07);
@@ -81,7 +79,6 @@ body {
 .tag-input-inline { background:none; border:none; outline:none; color:#e8d5ff; font-family:'Share Tech Mono',monospace; font-size:11px; min-width:90px; flex:1; }
 .tag-input-inline::placeholder { color:rgba(157,110,247,.2); }
 
-/* Buttons */
 .sm-btn { font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:1.5px; padding:6px 12px; border-radius:2px; cursor:pointer; white-space:nowrap; transition:background .18s,box-shadow .18s; flex-shrink:0; }
 .sm-purple { border:1px solid rgba(157,110,247,.5); color:#c4b5fd; background:rgba(157,110,247,.1); }
 .sm-purple:hover { background:rgba(157,110,247,.25); }
@@ -92,7 +89,6 @@ body {
 .sm-red    { border:1px solid rgba(239,68,68,.55);  color:#fca5a5; background:rgba(239,68,68,.1); display:none; }
 .sm-red:hover    { background:rgba(239,68,68,.22); }
 
-/* Status */
 .stream-badge { font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:2px; padding:4px 8px; border-radius:2px; white-space:nowrap; display:none; }
 .stream-badge.live { display:inline-block; background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.4); color:#fca5a5; }
 .stream-badge.connecting { display:inline-block; background:rgba(234,179,8,.1); border:1px solid rgba(234,179,8,.35); color:#fde047; }
@@ -100,7 +96,6 @@ body {
 .stream-timer.active { display:inline-block; }
 .twitch-badge { font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:1px; color:#c084fc; background:rgba(157,110,247,.1); border:1px solid rgba(157,110,247,.3); padding:4px 10px; border-radius:2px; white-space:nowrap; display:none; }
 
-/* Preview area */
 .stream-body { flex:1; position:relative; display:flex; align-items:center; justify-content:center; }
 .stream-preview { position:absolute; inset:0; display:none; }
 .stream-preview.active { display:block; }
@@ -108,7 +103,6 @@ body {
 .stream-hint { font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:3px; color:rgba(157,110,247,.18); text-align:center; line-height:2.4; z-index:2; pointer-events:none; }
 .stream-hint.hidden { display:none; }
 
-/* Debug log */
 .debug-log {
   position:absolute; bottom:0; left:0; right:0; z-index:5;
   background:rgba(5,2,12,.93); border-top:1px solid rgba(157,110,247,.15);
@@ -182,9 +176,7 @@ body {
 
 <!-- STREAM PANEL -->
 <div class="stream-panel">
-
   <div class="stream-controls">
-
     <!-- Row 1: Title + Twitch account -->
     <div class="ctrl-row">
       <span class="ctrl-label">TITLE</span>
@@ -194,7 +186,6 @@ body {
       <button class="sm-btn sm-purple" id="twitchAuthBtn" onclick="twitchAuth()">CONNECT TWITCH</button>
       <span class="twitch-badge" id="twitchBadge">◈ —</span>
     </div>
-
     <!-- Row 2: Tags + update -->
     <div class="ctrl-row">
       <span class="ctrl-label">TAGS</span>
@@ -203,7 +194,6 @@ body {
       </div>
       <button class="sm-btn sm-purple" id="updateInfoBtn" onclick="updateStreamInfo()" disabled>UPDATE INFO</button>
     </div>
-
     <!-- Row 3: Stream key + go live -->
     <div class="ctrl-row">
       <span class="ctrl-label">KEY</span>
@@ -297,7 +287,6 @@ tagInput.addEventListener('paste', e => {
 //  TWITCH OAUTH + HELIX API
 // ═══════════════════════════════════════════════════════════
 let twitchToken = null, twitchUserId = null;
-
 function ls(k,v) { try { if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); } catch(e){} }
 
 async function onTokenReady() {
@@ -324,7 +313,7 @@ async function onTokenReady() {
 
 function twitchAuth() {
   const cid = document.getElementById('clientIdInput').value.trim();
-  if (!cid) { dbg('Enter your Twitch Client ID first (free at dev.twitch.tv/console)', 'warn'); document.getElementById('clientIdInput').focus(); return; }
+  if (!cid) { dbg('Enter your Twitch Client ID first', 'warn'); document.getElementById('clientIdInput').focus(); return; }
   ls('twitch_client_id', cid);
   const redirect = window.location.href.split('#')[0];
   const url = 'https://id.twitch.tv/oauth2/authorize?client_id=' + encodeURIComponent(cid)
@@ -357,9 +346,9 @@ async function updateStreamInfo() {
 
 // ═══════════════════════════════════════════════════════════
 //  STREAMING  (WebRTC WHIP → Twitch)
+//  FIX: stream key goes in the URL, not just the auth header
 // ═══════════════════════════════════════════════════════════
 let pc = null, capStream = null, timerInterval = null;
-const WHIP = 'https://ingest.global-contribute.live-video.net/whip';
 
 function setUI(state) {
   const go    = document.getElementById('goLiveBtn');
@@ -403,35 +392,34 @@ async function startStream() {
   setUI('connecting');
 
   try {
-    // 1. Screen capture
     dbg('Requesting screen + audio capture…');
     capStream = await navigator.mediaDevices.getDisplayMedia({
       video: { width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30} },
       audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:false }
     });
-    const trackInfo = capStream.getTracks().map(t=>t.kind+':'+t.label.slice(0,28)).join(', ');
-    dbg('Capture OK  →  ' + trackInfo, 'ok');
+    dbg('Capture OK → ' + capStream.getTracks().map(t=>t.kind+':'+t.label.slice(0,28)).join(', '), 'ok');
 
-    // Preview
     document.getElementById('previewVideo').srcObject = capStream;
     document.getElementById('streamPreview').classList.add('active');
     document.getElementById('streamHint').classList.add('hidden');
-    capStream.getVideoTracks()[0].addEventListener('ended', () => { dbg('Screen share ended by user','warn'); stopStream(); });
+    capStream.getVideoTracks()[0].addEventListener('ended', () => { dbg('Screen share ended','warn'); stopStream(); });
 
-    // 2. PeerConnection
     dbg('Creating RTCPeerConnection…');
-    pc = new RTCPeerConnection({ bundlePolicy:'max-bundle', rtcpMuxPolicy:'require' });
+    pc = new RTCPeerConnection({
+      bundlePolicy:'max-bundle', rtcpMuxPolicy:'require',
+      iceServers:[{urls:'stun:stun.cloudflare.com:3478'},{urls:'stun:stun.l.google.com:19302'}]
+    });
     pc.oniceconnectionstatechange = () => dbg('ICE: ' + pc.iceConnectionState);
-    pc.onconnectionstatechange    = () => {
+    pc.onconnectionstatechange = () => {
       dbg('Conn: ' + pc.connectionState);
       if (pc.connectionState === 'failed') { dbg('Connection failed','err'); stopStream(); }
     };
-    capStream.getTracks().forEach(t => { pc.addTrack(t, capStream); dbg('Track added: ' + t.kind + ' ' + t.label.slice(0,30)); });
 
-    // 3. Offer + wait for ICE
+    capStream.getTracks().forEach(t => pc.addTrack(t, capStream));
+
     dbg('Creating SDP offer…');
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
+    await pc.setLocalDescription(await pc.createOffer());
+
     dbg('Waiting for ICE gathering (max 8s)…');
     await new Promise(resolve => {
       if (pc.iceGatheringState === 'complete') { resolve(); return; }
@@ -442,38 +430,33 @@ async function startStream() {
       });
     });
 
-    // 4. POST SDP to Twitch WHIP
-    dbg('POSTing SDP offer to Twitch WHIP…');
+    // ── FIXED: stream key in URL query param ──
+    const whipUrl = 'https://ingest.global-contribute.live-video.net/whip?streamkey=' + encodeURIComponent(key);
+    dbg('POSTing SDP to Twitch WHIP…');
+
     let resp;
     try {
-      resp = await fetch(WHIP, {
+      resp = await fetch(whipUrl, {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/sdp' },
+        headers: { 'Content-Type': 'application/sdp' },
         body: pc.localDescription.sdp
       });
     } catch(fetchErr) {
-      // "Failed to fetch" = CORS block or no network to that host
-      throw new Error(
-        'CORS / network error reaching Twitch WHIP. ' +
-        'You need to serve this file from a local server — open a terminal in this file\'s folder and run:\n' +
-        '  python3 -m http.server 8080\n' +
-        'then open  http://localhost:8080  in Chrome.'
-      );
+      throw new Error('Network/CORS error: ' + fetchErr.message);
     }
 
     dbg('Twitch response: HTTP ' + resp.status);
     if (!resp.ok) {
       const body = await resp.text().catch(()=>'');
-      if (resp.status === 401) throw new Error('401 Unauthorized — stream key is wrong or expired');
-      if (resp.status === 403) throw new Error('403 Forbidden — channel may be blocked or key revoked');
+      if (resp.status === 401) throw new Error('401 — stream key wrong or expired');
+      if (resp.status === 403) throw new Error('403 — channel blocked or key revoked');
       throw new Error('HTTP ' + resp.status + ': ' + body.slice(0,200));
     }
 
-    // 5. Set remote description
     const sdpAnswer = await resp.text();
     dbg('SDP answer received (' + sdpAnswer.length + ' bytes)');
     await pc.setRemoteDescription({ type:'answer', sdp:sdpAnswer });
-    dbg('Remote description set — you are LIVE!', 'ok');
+    dbg('You are LIVE!', 'ok');
     setUI('live');
 
   } catch(err) {
@@ -505,6 +488,7 @@ function chatMsg(user,color,msg) {
   f.appendChild(e); f.scrollTop=f.scrollHeight;
 }
 function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 async function connectChat() {
   const ch=document.getElementById('channelInput').value.trim().toLowerCase(); if(!ch) return;
   const btn=document.getElementById('connectBtn'); btn.disabled=true; btn.textContent='CONNECTING…'; setStatus('CONNECTING',false);
@@ -540,7 +524,6 @@ async function disconnectChat() {
 //  INIT
 // ═══════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
-  // OAuth callback
   const hash = new URLSearchParams(window.location.hash.replace('#',''));
   if (hash.get('access_token')) {
     twitchToken = hash.get('access_token');
@@ -548,14 +531,11 @@ window.addEventListener('DOMContentLoaded', () => {
     history.replaceState(null,'',window.location.pathname+window.location.search);
     onTokenReady();
   } else {
-    const t = ls('twitch_oauth_token');
-    if (t) { twitchToken = t; onTokenReady(); }
+    const t = ls('twitch_oauth_token'); if(t){ twitchToken=t; onTokenReady(); }
   }
-  // Restore saved values
-  const cid = ls('twitch_client_id'); if(cid) document.getElementById('clientIdInput').value=cid;
-  const title = ls('stream_title'); if(title) document.getElementById('streamTitle').value=title;
+  const cid=ls('twitch_client_id'); if(cid) document.getElementById('clientIdInput').value=cid;
+  const title=ls('stream_title'); if(title) document.getElementById('streamTitle').value=title;
   try { JSON.parse(ls('stream_tags')||'[]').forEach(addTag); } catch(e){}
-  // Chat
   document.getElementById('channelInput').addEventListener('keydown',e=>{if(e.key==='Enter')connectChat();});
   const ch=ls('twitch_channel'); if(ch){document.getElementById('channelInput').value=ch; connectChat();}
 });
