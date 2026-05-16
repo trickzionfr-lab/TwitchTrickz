@@ -1,5 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>TrickzTwitch</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Stream Dashboard</title>
@@ -359,7 +370,7 @@ async function updateStreamInfo() {
 //  STREAMING  (WebRTC WHIP → Twitch)
 // ═══════════════════════════════════════════════════════════
 let pc = null, capStream = null, timerInterval = null;
-const WHIP = 'https://g.twitch.tv/ingests/whip';
+const WHIP = 'https://ingest.global-contribute.live-video.net/whip';
 
 function setUI(state) {
   const go    = document.getElementById('goLiveBtn');
@@ -614,4 +625,8 @@ document.getElementById('playBtn').addEventListener('click',toggleMusic);
 document.getElementById('startBtn').addEventListener('click',()=>{Tone.start().then(()=>{document.getElementById('startScreen').style.display='none';});});
 </script>
 </body>
+</html>
+    
+  </body>
+  
 </html>
