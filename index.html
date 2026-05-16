@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stream Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  width: 100vw; height: 100vh;
+  background: #07030f;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  grid-template-rows: 1fr 110px;
+  overflow: hidden;
+  font-family: 'Rajdhani', sans-serif;
+  color: #e8d5ff;
+}
+
+/* ── CHAT PANEL ── */
+.chat-panel { grid-column:1; grid-row:1/3; display:flex; flex-direction:column; border-right:1px solid rgba(157,110,247,0.25); background:rgba(8,3,18,0.98); }
+.chat-header { padding:10px 14px; border-bottom:1px solid rgba(157,110,247,0.2); display:flex; align-items:center; gap:9px; flex-shrink:0; }
+.live-dot { width:7px; height:7px; border-radius:50%; background:#9d6ef7; box-shadow:0 0 8px #9d6ef7; animation:blink 1.8s infinite; }
+.live-dot.offline { background:#444; box-shadow:none; animation:none; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+.chat-label { font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:3px; color:#9d6ef7; flex:1; }
+.conn-status { font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:1px; color:rgba(157,110,247,.4); }
+.chat-setup { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:11px; padding:22px; }
+.setup-label { font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:2px; color:rgba(157,110,247,.4); text-align:center; line-height:1.9; }
+.channel-input { background:rgba(157,110,247,.07); border:1px solid rgba(157,110,247,.3); color:#e8d5ff; font-family:'Share Tech Mono',monospace; font-size:12px; letter-spacing:1px; padding:9px 11px; border-radius:2px; outline:none; width:100%; text-align:center; }
+.channel-input::placeholder { color:rgba(157,110,247,.28); }
+.channel-input:focus { border-color:#9d6ef7; }
+.connect-btn { background:rgba(157,110,247,.14); border:1px solid #9d6ef7; color:#e8d5ff; font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:2px; padding:9px; border-radius:2px; cursor:pointer; transition:background .2s; width:100%; }
+.connect-btn:hover { background:rgba(157,110,247,.32); }
+.connect-btn:disabled { opacity:.4; cursor:wait; }
+.disconnect-btn { font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:1px; color:rgba(157,110,247,.3); background:none; border:none; cursor:pointer; }
+.disconnect-btn:hover { color:rgba(157,110,247,.7); }
+.chat-feed { flex:1; overflow-y:auto; padding:8px 10px; display:flex; flex-direction:column; gap:4px; scrollbar-width:thin; scrollbar-color:rgba(157,110,247,.2) transparent; }
+.chat-feed::-webkit-scrollbar { width:3px; }
+.chat-feed::-webkit-scrollbar-thumb { background:rgba(157,110,247,.2); border-radius:2px; }
+.chat-msg { font-size:13px; line-height:1.45; padding:3px 6px; border-radius:3px; animation:msgIn .22s ease-out; word-break:break-word; }
+@keyframes msgIn { from{opacity:0;transform:translateX(-5px)} to{opacity:1;transform:none} }
+.chat-msg:hover { background:rgba(157,110,247,.06); }
+.chat-user { font-weight:700; margin-right:5px; }
+.chat-text { color:rgba(232,213,255,.76); }
+.system-msg { font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:1px; color:rgba(157,110,247,.3); padding:4px 6px; text-align:center; }
+
+/* ── STREAM PANEL ── */
+.stream-panel { grid-column:2; grid-row:1; background:#000; display:flex; flex-direction:column; overflow:hidden; }
+
+/* Controls bar */
+.stream-controls {
+  flex-shrink:0; background:rgba(5,2,12,.97);
+  border-bottom:1px solid rgba(157,110,247,.18);
+  padding:10px 14px; display:flex; flex-direction:column; gap:8px; z-index:10;
+}
+.ctrl-row { display:flex; gap:7px; align-items:center; flex-wrap:nowrap; }
+.ctrl-label { font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:2px; color:rgba(157,110,247,.4); white-space:nowrap; flex-shrink:0; }
+
+.ctrl-input {
+  background:rgba(157,110,247,.07); border:1px solid rgba(157,110,247,.22);
+  color:#e8d5ff; font-family:'Share Tech Mono',monospace;
+  font-size:11px; letter-spacing:.5px; padding:6px 10px; border-radius:2px;
+  outline:none; flex:1; min-width:0;
+}
+.ctrl-input::placeholder { color:rgba(157,110,247,.2); }
+.ctrl-input:focus { border-color:rgba(157,110,247,.55); }
+.ctrl-input:disabled { opacity:.4; }
+
+/* Tags pill box */
+.tags-box {
+  flex:1; display:flex; flex-wrap:wrap; gap:5px; align-items:center;
+  min-height:32px; background:rgba(157,110,247,.07);
+  border:1px solid rgba(157,110,247,.22); border-radius:2px;
+  padding:4px 8px; cursor:text; min-width:0;
+}
+.tags-box:focus-within { border-color:rgba(157,110,247,.55); }
+.tag-pill { display:inline-flex; align-items:center; gap:4px; background:rgba(157,110,247,.15); border:1px solid rgba(157,110,247,.32); font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:1px; color:#c4b5fd; padding:2px 7px; border-radius:2px; }
+.tag-pill button { background:none; border:none; color:rgba(157,110,247,.4); cursor:pointer; font-size:10px; padding:0; line-height:1; }
+.tag-pill button:hover { color:#c4b5fd; }
+.tag-input-inline { background:none; border:none; outline:none; color:#e8d5ff; font-family:'Share Tech Mono',monospace; font-size:11px; min-width:90px; flex:1; }
+.tag-input-inline::placeholder { color:rgba(157,110,247,.2); }
+
+/* Buttons */
+.sm-btn { font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:1.5px; padding:6px 12px; border-radius:2px; cursor:pointer; white-space:nowrap; transition:background .18s,box-shadow .18s; flex-shrink:0; }
+.sm-purple { border:1px solid rgba(157,110,247,.5); color:#c4b5fd; background:rgba(157,110,247,.1); }
+.sm-purple:hover { background:rgba(157,110,247,.25); }
+.sm-purple:disabled { opacity:.35; cursor:not-allowed; }
+.sm-green  { border:1px solid rgba(34,197,94,.55);  color:#86efac; background:rgba(34,197,94,.1); }
+.sm-green:hover  { background:rgba(34,197,94,.22); box-shadow:0 0 10px rgba(34,197,94,.2); }
+.sm-green:disabled { opacity:.35; cursor:not-allowed; }
+.sm-red    { border:1px solid rgba(239,68,68,.55);  color:#fca5a5; background:rgba(239,68,68,.1); display:none; }
+.sm-red:hover    { background:rgba(239,68,68,.22); }
+
+/* Status */
+.stream-badge { font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:2px; padding:4px 8px; border-radius:2px; white-space:nowrap; display:none; }
+.stream-badge.live { display:inline-block; background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.4); color:#fca5a5; }
+.stream-badge.connecting { display:inline-block; background:rgba(234,179,8,.1); border:1px solid rgba(234,179,8,.35); color:#fde047; }
+.stream-timer { font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:2px; color:rgba(157,110,247,.5); display:none; }
+.stream-timer.active { display:inline-block; }
+.twitch-badge { font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:1px; color:#c084fc; background:rgba(157,110,247,.1); border:1px solid rgba(157,110,247,.3); padding:4px 10px; border-radius:2px; white-space:nowrap; display:none; }
+
+/* Preview area */
+.stream-body { flex:1; position:relative; display:flex; align-items:center; justify-content:center; }
+.stream-preview { position:absolute; inset:0; display:none; }
+.stream-preview.active { display:block; }
+.stream-preview video { width:100%; height:100%; object-fit:contain; background:#000; }
+.stream-hint { font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:3px; color:rgba(157,110,247,.18); text-align:center; line-height:2.4; z-index:2; pointer-events:none; }
+.stream-hint.hidden { display:none; }
+
+/* Debug log */
+.debug-log {
+  position:absolute; bottom:0; left:0; right:0; z-index:5;
+  background:rgba(5,2,12,.93); border-top:1px solid rgba(157,110,247,.15);
+  max-height:100px; overflow-y:auto; padding:7px 12px;
+  font-family:'Share Tech Mono',monospace; font-size:9px; line-height:1.75;
+  color:rgba(157,110,247,.4); display:none;
+  scrollbar-width:thin; scrollbar-color:rgba(157,110,247,.15) transparent;
+}
+.debug-log.open { display:block; }
+.debug-log .err  { color:#fca5a5; }
+.debug-log .ok   { color:#86efac; }
+.debug-log .warn { color:#fde047; }
+
+/* ── BOTTOM BAR ── */
+.bottom-bar { grid-column:2; grid-row:2; display:flex; align-items:center; border-top:1px solid rgba(157,110,247,.22); background:rgba(5,2,12,.99); position:relative; overflow:hidden; padding:0 18px; }
+.bottom-bar::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,#9d6ef788,transparent); }
+.music-section { display:flex; align-items:center; gap:13px; }
+.play-btn { width:36px; height:36px; border-radius:50%; background:rgba(157,110,247,.12); border:1.5px solid #9d6ef7; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; flex-shrink:0; box-shadow:0 0 10px rgba(157,110,247,.28); transition:background .2s; user-select:none; }
+.play-btn:hover { background:rgba(157,110,247,.28); }
+.play-btn.loading { opacity:.5; cursor:wait; pointer-events:none; }
+.music-bars { display:flex; align-items:flex-end; gap:3px; height:26px; flex-shrink:0; }
+.music-bar { width:3px; height:4px; background:#9d6ef7; border-radius:2px; transition:height .1s ease; }
+.music-info { overflow:hidden; }
+.music-name { font-size:14px; font-weight:700; color:#e8d5ff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.music-meta { font-family:'Share Tech Mono',monospace; font-size:9px; color:#9d6ef7; letter-spacing:2px; margin-top:2px; }
+
+/* ── START SCREEN ── */
+.start-screen { position:fixed; inset:0; background:rgba(7,3,15,.96); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; z-index:200; }
+.start-logo { font-size:11px; font-family:'Share Tech Mono',monospace; letter-spacing:5px; color:rgba(157,110,247,.5); margin-bottom:6px; }
+.start-title { font-size:38px; font-weight:700; letter-spacing:5px; color:#9d6ef7; text-shadow:0 0 40px #9d6ef755; }
+.start-sub { font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:3px; color:rgba(157,110,247,.55); }
+.start-tracks { display:flex; gap:10px; margin:8px 0; flex-wrap:wrap; justify-content:center; }
+.track-pill { padding:5px 14px; background:rgba(157,110,247,.1); border:1px solid rgba(157,110,247,.3); font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:1px; color:rgba(232,213,255,.6); border-radius:2px; }
+.start-btn { margin-top:8px; padding:13px 36px; background:rgba(157,110,247,.14); border:1px solid #9d6ef7; color:#e8d5ff; cursor:pointer; font-family:'Rajdhani',sans-serif; font-size:17px; font-weight:700; letter-spacing:4px; box-shadow:0 0 24px rgba(157,110,247,.28); transition:background .2s; }
+.start-btn:hover { background:rgba(157,110,247,.32); }
+.start-note { font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:2px; color:rgba(157,110,247,.3); }
+</style>
+</head>
+<body>
+
+<!-- START SCREEN -->
+<div class="start-screen" id="startScreen">
+  <div class="start-logo">◈ STREAM DASHBOARD ◈</div>
+  <div class="start-title">DARK LOFI</div>
+  <div class="start-sub">PURPLE · ORIGINAL MUSIC · LIVE</div>
+  <div class="start-tracks">
+    <div class="track-pill">Midnight Drift</div>
+    <div class="track-pill">Purple Haze</div>
+    <div class="track-pill">Violet Hour</div>
+    <div class="track-pill">Crystal Nights</div>
+  </div>
+  <button class="start-btn" id="startBtn">▶ START SESSION</button>
+  <div class="start-note">click to initialize audio engine</div>
+</div>
+
+<!-- CHAT PANEL -->
+<div class="chat-panel">
+  <div class="chat-header">
+    <div class="live-dot offline" id="liveDot"></div>
+    <span class="chat-label">LIVE CHAT</span>
+    <span class="conn-status" id="connStatus">DISCONNECTED</span>
+  </div>
+  <div class="chat-setup" id="chatSetup">
+    <div class="setup-label">TWITCH CHANNEL</div>
+    <input class="channel-input" id="channelInput" type="text" placeholder="yourchannel" spellcheck="false" autocomplete="off" />
+    <button class="connect-btn" id="connectBtn" onclick="connectChat()">▶ CONNECT CHAT</button>
+    <div class="setup-label" style="font-size:8px;opacity:.5;margin-top:4px">reads live chat via IRC · no iframe</div>
+  </div>
+  <div class="chat-feed" id="chatFeed" style="display:none;"></div>
+</div>
+
+<!-- STREAM PANEL -->
+<div class="stream-panel">
+
+  <div class="stream-controls">
+
+    <!-- Row 1: Title + Twitch account -->
+    <div class="ctrl-row">
+      <span class="ctrl-label">TITLE</span>
+      <input class="ctrl-input" id="streamTitle" placeholder="stream title…" maxlength="140" />
+      <span class="ctrl-label" style="margin-left:4px;flex-shrink:0">CLIENT ID</span>
+      <input class="ctrl-input" id="clientIdInput" placeholder="dev.twitch.tv app id" style="max-width:155px" />
+      <button class="sm-btn sm-purple" id="twitchAuthBtn" onclick="twitchAuth()">CONNECT TWITCH</button>
+      <span class="twitch-badge" id="twitchBadge">◈ —</span>
+    </div>
+
+    <!-- Row 2: Tags + update -->
+    <div class="ctrl-row">
+      <span class="ctrl-label">TAGS</span>
+      <div class="tags-box" id="tagsBox" onclick="document.getElementById('tagInput').focus()">
+        <input class="tag-input-inline" id="tagInput" placeholder="type a tag + Enter…" maxlength="25" />
+      </div>
+      <button class="sm-btn sm-purple" id="updateInfoBtn" onclick="updateStreamInfo()" disabled>UPDATE INFO</button>
+    </div>
+
+    <!-- Row 3: Stream key + go live -->
+    <div class="ctrl-row">
+      <span class="ctrl-label">KEY</span>
+      <input class="ctrl-input" id="streamKeyInput" type="password" placeholder="paste Twitch stream key…" autocomplete="off" style="max-width:310px" />
+      <span class="stream-badge" id="streamBadge"></span>
+      <span class="stream-timer" id="streamTimer">00:00:00</span>
+      <button class="sm-btn sm-green"  id="goLiveBtn"  onclick="startStream()">▶ GO LIVE</button>
+      <button class="sm-btn sm-red"    id="stopBtn"    onclick="stopStream()">■ END STREAM</button>
+      <button class="sm-btn sm-purple" id="logToggle"  onclick="toggleLog()" style="margin-left:auto;opacity:.45;font-size:8px">LOG</button>
+    </div>
+  </div>
+
+  <div class="stream-body">
+    <div class="stream-preview" id="streamPreview">
+      <video id="previewVideo" autoplay muted playsinline></video>
+    </div>
+    <div class="stream-hint" id="streamHint">
+      [ enter title &amp; tags · paste stream key · click GO LIVE ]<br>
+      <span style="font-size:8px;color:rgba(157,110,247,.1)">WEBRTC WHIP · DIRECT BROWSER STREAM TO TWITCH</span>
+    </div>
+    <div class="debug-log" id="debugLog"></div>
+  </div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar">
+  <div class="music-section">
+    <div class="play-btn" id="playBtn">▶</div>
+    <div class="music-bars" id="musicBars"></div>
+    <div class="music-info">
+      <div class="music-name" id="trackName">Midnight Drift</div>
+      <div class="music-meta" id="trackMeta">LOFI · ORIGINAL · ♩ 82 BPM</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tmi.js/1.8.5/tmi.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════
+//  DEBUG LOG
+// ═══════════════════════════════════════════════════════════
+let logOpen = false;
+function toggleLog() { logOpen = !logOpen; document.getElementById('debugLog').classList.toggle('open', logOpen); }
+function dbg(msg, type) {
+  const log = document.getElementById('debugLog');
+  const el = document.createElement('div');
+  if (type) el.className = type;
+  el.textContent = '[' + new Date().toISOString().slice(11,23) + '] ' + msg;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  if (type === 'err') { log.classList.add('open'); logOpen = true; }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TAGS
+// ═══════════════════════════════════════════════════════════
+const tagList = [];
+const tagInput = document.getElementById('tagInput');
+
+function renderTags() {
+  document.getElementById('tagsBox').querySelectorAll('.tag-pill').forEach(p => p.remove());
+  tagList.forEach((t, i) => {
+    const pill = document.createElement('span');
+    pill.className = 'tag-pill';
+    pill.innerHTML = '#' + escHtml(t) + ' <button onclick="removeTag(' + i + ')">✕</button>';
+    document.getElementById('tagsBox').insertBefore(pill, tagInput);
+  });
+}
+function removeTag(i) { tagList.splice(i,1); renderTags(); }
+function addTag(raw) {
+  const t = raw.replace(/^#+/,'').replace(/\s+/g,'').slice(0,25).toLowerCase();
+  if (!t || tagList.includes(t) || tagList.length >= 10) return;
+  tagList.push(t); renderTags();
+}
+tagInput.addEventListener('keydown', e => {
+  if (e.key==='Enter'||e.key===','||e.key===' ') {
+    e.preventDefault();
+    if (tagInput.value.trim()) { addTag(tagInput.value.trim()); tagInput.value=''; }
+  }
+  if (e.key==='Backspace' && tagInput.value==='' && tagList.length>0) { tagList.pop(); renderTags(); }
+});
+tagInput.addEventListener('paste', e => {
+  e.preventDefault();
+  (e.clipboardData||window.clipboardData).getData('text').split(/[\s,]+/).forEach(t => { if(t) addTag(t); });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  TWITCH OAUTH + HELIX API
+// ═══════════════════════════════════════════════════════════
+let twitchToken = null, twitchUserId = null;
+
+function ls(k,v) { try { if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); } catch(e){} }
+
+async function onTokenReady() {
+  const cid = document.getElementById('clientIdInput').value.trim() || ls('twitch_client_id');
+  if (!cid) return;
+  try {
+    const r = await fetch('https://api.twitch.tv/helix/users', {
+      headers: { 'Authorization': 'Bearer ' + twitchToken, 'Client-Id': cid }
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    twitchUserId = d.data[0].id;
+    const name = d.data[0].display_name;
+    const badge = document.getElementById('twitchBadge');
+    badge.textContent = '◈ ' + name; badge.style.display = 'inline-block';
+    document.getElementById('twitchAuthBtn').style.display = 'none';
+    document.getElementById('updateInfoBtn').disabled = false;
+    dbg('Twitch linked: ' + name, 'ok');
+  } catch(e) {
+    dbg('Token check failed: ' + e.message + ' — re-auth needed', 'warn');
+    twitchToken = null; ls('twitch_oauth_token', '');
+  }
+}
+
+function twitchAuth() {
+  const cid = document.getElementById('clientIdInput').value.trim();
+  if (!cid) { dbg('Enter your Twitch Client ID first (free at dev.twitch.tv/console)', 'warn'); document.getElementById('clientIdInput').focus(); return; }
+  ls('twitch_client_id', cid);
+  const redirect = window.location.href.split('#')[0];
+  const url = 'https://id.twitch.tv/oauth2/authorize?client_id=' + encodeURIComponent(cid)
+    + '&redirect_uri=' + encodeURIComponent(redirect)
+    + '&response_type=token&scope=channel%3Amanage%3Abroadcast&force_verify=false';
+  window.location.href = url;
+}
+
+async function updateStreamInfo() {
+  const cid = document.getElementById('clientIdInput').value.trim() || ls('twitch_client_id');
+  if (!twitchToken || !twitchUserId || !cid) { dbg('Connect Twitch account first', 'warn'); return; }
+  const title = document.getElementById('streamTitle').value.trim();
+  ls('stream_title', title); ls('stream_tags', JSON.stringify(tagList));
+  const btn = document.getElementById('updateInfoBtn');
+  btn.disabled = true; btn.textContent = 'SAVING…';
+  dbg('Updating channel info…');
+  try {
+    const body = { title };
+    if (tagList.length > 0) body.tags = tagList;
+    const r = await fetch('https://api.twitch.tv/helix/channels?broadcaster_id=' + twitchUserId, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + twitchToken, 'Client-Id': cid, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (r.status === 204) { dbg('Channel info updated ✓', 'ok'); }
+    else { const txt = await r.text().catch(()=>''); throw new Error(r.status + ' ' + txt.slice(0,100)); }
+  } catch(e) { dbg('Update failed: ' + e.message, 'err'); }
+  btn.disabled = false; btn.textContent = 'UPDATE INFO';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STREAMING  (WebRTC WHIP → Twitch)
+// ═══════════════════════════════════════════════════════════
+let pc = null, capStream = null, timerInterval = null;
+const WHIP = 'https://g.twitch.tv/ingests/whip';
+
+function setUI(state) {
+  const go    = document.getElementById('goLiveBtn');
+  const stop  = document.getElementById('stopBtn');
+  const badge = document.getElementById('streamBadge');
+  const timer = document.getElementById('streamTimer');
+  const key   = document.getElementById('streamKeyInput');
+  clearInterval(timerInterval); timerInterval = null;
+  if (state === 'idle') {
+    go.style.display=''; go.disabled=false; go.textContent='▶ GO LIVE';
+    stop.style.display='none'; badge.className='stream-badge'; timer.classList.remove('active'); key.disabled=false;
+  } else if (state === 'connecting') {
+    go.disabled=true; go.textContent='◌ CONNECTING…';
+    badge.className='stream-badge connecting'; badge.textContent='◌ CONNECTING'; key.disabled=true;
+  } else if (state === 'live') {
+    go.style.display='none'; stop.style.display='';
+    badge.className='stream-badge live'; badge.textContent='● LIVE'; timer.classList.add('active');
+    const t0 = Date.now();
+    timerInterval = setInterval(() => {
+      const s = Math.floor((Date.now()-t0)/1000);
+      document.getElementById('streamTimer').textContent =
+        String(Math.floor(s/3600)).padStart(2,'0') + ':' +
+        String(Math.floor((s%3600)/60)).padStart(2,'0') + ':' +
+        String(s%60).padStart(2,'0');
+    }, 1000);
+  }
+}
+
+function cleanupStream() {
+  if (capStream) { capStream.getTracks().forEach(t=>t.stop()); capStream=null; }
+  if (pc) { try{pc.close();}catch(e){} pc=null; }
+  document.getElementById('previewVideo').srcObject = null;
+  document.getElementById('streamPreview').classList.remove('active');
+  document.getElementById('streamHint').classList.remove('hidden');
+}
+
+async function startStream() {
+  const key = document.getElementById('streamKeyInput').value.trim();
+  if (!key) { dbg('Paste your Twitch stream key first', 'warn'); return; }
+
+  setUI('connecting');
+
+  try {
+    // 1. Screen capture
+    dbg('Requesting screen + audio capture…');
+    capStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30} },
+      audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:false }
+    });
+    const trackInfo = capStream.getTracks().map(t=>t.kind+':'+t.label.slice(0,28)).join(', ');
+    dbg('Capture OK  →  ' + trackInfo, 'ok');
+
+    // Preview
+    document.getElementById('previewVideo').srcObject = capStream;
+    document.getElementById('streamPreview').classList.add('active');
+    document.getElementById('streamHint').classList.add('hidden');
+    capStream.getVideoTracks()[0].addEventListener('ended', () => { dbg('Screen share ended by user','warn'); stopStream(); });
+
+    // 2. PeerConnection
+    dbg('Creating RTCPeerConnection…');
+    pc = new RTCPeerConnection({ bundlePolicy:'max-bundle', rtcpMuxPolicy:'require' });
+    pc.oniceconnectionstatechange = () => dbg('ICE: ' + pc.iceConnectionState);
+    pc.onconnectionstatechange    = () => {
+      dbg('Conn: ' + pc.connectionState);
+      if (pc.connectionState === 'failed') { dbg('Connection failed','err'); stopStream(); }
+    };
+    capStream.getTracks().forEach(t => { pc.addTrack(t, capStream); dbg('Track added: ' + t.kind + ' ' + t.label.slice(0,30)); });
+
+    // 3. Offer + wait for ICE
+    dbg('Creating SDP offer…');
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    dbg('Waiting for ICE gathering (max 8s)…');
+    await new Promise(resolve => {
+      if (pc.iceGatheringState === 'complete') { resolve(); return; }
+      const tid = setTimeout(() => { dbg('ICE gather timeout — proceeding','warn'); resolve(); }, 8000);
+      pc.addEventListener('icegatheringstatechange', () => {
+        dbg('ICE gather: ' + pc.iceGatheringState);
+        if (pc.iceGatheringState === 'complete') { clearTimeout(tid); resolve(); }
+      });
+    });
+
+    // 4. POST SDP to Twitch WHIP
+    dbg('POSTing SDP offer to Twitch WHIP…');
+    let resp;
+    try {
+      resp = await fetch(WHIP, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/sdp' },
+        body: pc.localDescription.sdp
+      });
+    } catch(fetchErr) {
+      // "Failed to fetch" = CORS block or no network to that host
+      throw new Error(
+        'CORS / network error reaching Twitch WHIP. ' +
+        'You need to serve this file from a local server — open a terminal in this file\'s folder and run:\n' +
+        '  python3 -m http.server 8080\n' +
+        'then open  http://localhost:8080  in Chrome.'
+      );
+    }
+
+    dbg('Twitch response: HTTP ' + resp.status);
+    if (!resp.ok) {
+      const body = await resp.text().catch(()=>'');
+      if (resp.status === 401) throw new Error('401 Unauthorized — stream key is wrong or expired');
+      if (resp.status === 403) throw new Error('403 Forbidden — channel may be blocked or key revoked');
+      throw new Error('HTTP ' + resp.status + ': ' + body.slice(0,200));
+    }
+
+    // 5. Set remote description
+    const sdpAnswer = await resp.text();
+    dbg('SDP answer received (' + sdpAnswer.length + ' bytes)');
+    await pc.setRemoteDescription({ type:'answer', sdp:sdpAnswer });
+    dbg('Remote description set — you are LIVE!', 'ok');
+    setUI('live');
+
+  } catch(err) {
+    dbg('ERROR: ' + err.message, 'err');
+    cleanupStream();
+    setUI('idle');
+  }
+}
+
+function stopStream() {
+  dbg('Stream ended');
+  cleanupStream();
+  setUI('idle');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TWITCH CHAT
+// ═══════════════════════════════════════════════════════════
+let tmiClient = null;
+const NC = ['#c084fc','#a855f7','#9d6ef7','#818cf8','#c4b5fd','#ddd6fe','#e879f9','#f0abfc'];
+function nameColor(n) { let h=0; for(let i=0;i<n.length;i++) h=(h*31+n.charCodeAt(i))&0xffffffff; return NC[Math.abs(h)%NC.length]; }
+function setStatus(t,on) { document.getElementById('connStatus').textContent=t; document.getElementById('liveDot').classList.toggle('offline',!on); }
+function sysMsg(t) { const f=document.getElementById('chatFeed'),e=document.createElement('div'); e.className='system-msg'; e.textContent=t; f.appendChild(e); f.scrollTop=f.scrollHeight; }
+function chatMsg(user,color,msg) {
+  const f=document.getElementById('chatFeed');
+  while(f.children.length>=80) f.removeChild(f.firstChild);
+  const e=document.createElement('div'); e.className='chat-msg';
+  e.innerHTML='<span class="chat-user" style="color:'+(color||nameColor(user))+'">'+escHtml(user)+'</span><span class="chat-text">'+escHtml(msg)+'</span>';
+  f.appendChild(e); f.scrollTop=f.scrollHeight;
+}
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+async function connectChat() {
+  const ch=document.getElementById('channelInput').value.trim().toLowerCase(); if(!ch) return;
+  const btn=document.getElementById('connectBtn'); btn.disabled=true; btn.textContent='CONNECTING…'; setStatus('CONNECTING',false);
+  if(tmiClient){try{await tmiClient.disconnect();}catch(e){} tmiClient=null;}
+  tmiClient=new tmi.Client({options:{debug:false},channels:[ch]});
+  tmiClient.on('message',(_,tags,msg)=>chatMsg(tags['display-name']||tags.username||'anon',tags.color||null,msg));
+  tmiClient.on('connected',()=>{
+    setStatus('LIVE',true); btn.disabled=false; btn.textContent='▶ CONNECT CHAT';
+    document.getElementById('chatSetup').style.display='none';
+    document.getElementById('chatFeed').style.display='flex';
+    sysMsg('connected to #'+ch);
+    if(!document.getElementById('discBtn')){ const d=document.createElement('button'); d.className='disconnect-btn'; d.id='discBtn'; d.textContent='✕'; d.onclick=disconnectChat; document.querySelector('.chat-header').appendChild(d); }
+    ls('twitch_channel',ch);
+  });
+  tmiClient.on('disconnected',()=>setStatus('DISCONNECTED',false));
+  try{await tmiClient.connect();}catch(e){
+    setStatus('ERROR',false); btn.disabled=false; btn.textContent='▶ CONNECT CHAT';
+    sysMsg('could not connect — check channel name');
+    document.getElementById('chatSetup').style.display='flex';
+    document.getElementById('chatFeed').style.display='none';
+  }
+}
+async function disconnectChat() {
+  if(tmiClient){try{await tmiClient.disconnect();}catch(e){} tmiClient=null;}
+  setStatus('DISCONNECTED',false);
+  document.getElementById('chatSetup').style.display='flex';
+  document.getElementById('chatFeed').style.display='none';
+  document.getElementById('chatFeed').innerHTML='';
+  const d=document.getElementById('discBtn'); if(d) d.remove();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  // OAuth callback
+  const hash = new URLSearchParams(window.location.hash.replace('#',''));
+  if (hash.get('access_token')) {
+    twitchToken = hash.get('access_token');
+    ls('twitch_oauth_token', twitchToken);
+    history.replaceState(null,'',window.location.pathname+window.location.search);
+    onTokenReady();
+  } else {
+    const t = ls('twitch_oauth_token');
+    if (t) { twitchToken = t; onTokenReady(); }
+  }
+  // Restore saved values
+  const cid = ls('twitch_client_id'); if(cid) document.getElementById('clientIdInput').value=cid;
+  const title = ls('stream_title'); if(title) document.getElementById('streamTitle').value=title;
+  try { JSON.parse(ls('stream_tags')||'[]').forEach(addTag); } catch(e){}
+  // Chat
+  document.getElementById('channelInput').addEventListener('keydown',e=>{if(e.key==='Enter')connectChat();});
+  const ch=ls('twitch_channel'); if(ch){document.getElementById('channelInput').value=ch; connectChat();}
+});
+
+// ═══════════════════════════════════════════════════════════
+//  VISUALIZER
+// ═══════════════════════════════════════════════════════════
+const barsEl=document.getElementById('musicBars'), vBars=[];
+for(let i=0;i<10;i++){const b=document.createElement('div');b.className='music-bar';barsEl.appendChild(b);vBars.push(b);}
+let mPlaying=false,vInt=null;
+function startViz(){clearInterval(vInt);vInt=setInterval(()=>vBars.forEach(b=>{b.style.height=(4+Math.random()*22)+'px';}),90);}
+function stopViz(){clearInterval(vInt);vBars.forEach(b=>b.style.height='4px');}
+
+// ═══════════════════════════════════════════════════════════
+//  MUSIC ENGINE
+// ═══════════════════════════════════════════════════════════
+const TRACKS=[{name:'Midnight Drift',bpm:82,key:'Am'},{name:'Purple Haze',bpm:78,key:'Cm'},{name:'Violet Hour',bpm:85,key:'Dm'},{name:'Crystal Nights',bpm:80,key:'Gm'}];
+const CHORDS={Am:[['A3','C4','E4','G4'],['D3','F3','A3','C4'],['F3','A3','C4','E4'],['G3','B3','D4','F4']],Cm:[['C3','Eb3','G3','Bb3'],['Ab2','C3','Eb3','G3'],['Eb3','G3','Bb3','D4'],['Bb2','D3','F3','Ab3']],Dm:[['D3','F3','A3','C4'],['G2','B2','D3','F3'],['Bb2','D3','F3','A3'],['A2','C3','E3','G3']],Gm:[['G3','Bb3','D4','F4'],['Eb3','G3','Bb3','D4'],['C3','Eb3','G3','Bb3'],['D3','F3','A3','C4']]};
+let engStarted=false,curTrack=0,synths=[],seq=null;
+function disposeEng(){if(seq){try{seq.stop();seq.dispose();}catch(e){}seq=null;}synths.forEach(s=>{try{s.dispose();}catch(e){}});synths=[];}
+async function buildEng(idx){
+  disposeEng();const tr=TRACKS[idx];
+  Tone.Transport.bpm.value=tr.bpm;Tone.Transport.swing=0.5;Tone.Transport.swingSubdivision='16n';
+  const lim=new Tone.Limiter(-4).toDestination();
+  const rev=new Tone.Reverb({decay:2.2,wet:.3});await rev.ready;rev.connect(lim);
+  const filt=new Tone.Filter({frequency:3000,type:'lowpass',rolloff:-24}).connect(rev);
+  const vn=new Tone.Noise('brown'),vg=new Tone.Gain(.012).connect(filt);vn.connect(vg);vn.start();
+  synths.push(lim,rev,filt,vn,vg);
+  const chord=new Tone.PolySynth(Tone.Synth,{oscillator:{type:'triangle'},envelope:{attack:.07,decay:.6,sustain:.45,release:2.5},volume:-13}).connect(filt);
+  const bass=new Tone.Synth({oscillator:{type:'sine'},envelope:{attack:.06,decay:.4,sustain:.65,release:.5},volume:-10}).connect(filt);
+  const kick=new Tone.MembraneSynth({pitchDecay:.07,octaves:5,envelope:{attack:.001,decay:.28,sustain:0,release:.1},volume:-8}).connect(lim);
+  const hiHp=new Tone.Filter({frequency:6500,type:'highpass'}).connect(lim);
+  const hihat=new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:.001,decay:.065,sustain:0,release:.04},volume:-24}).connect(hiHp);
+  const snBp=new Tone.Filter({frequency:2200,type:'bandpass',Q:.7}).connect(lim);
+  const snare=new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:.001,decay:.13,sustain:0,release:.08},volume:-20}).connect(snBp);
+  synths.push(chord,bass,kick,hiHp,hihat,snBp,snare);
+  const cds=CHORDS[tr.key];let bar=0,cur=cds[0];
+  seq=new Tone.Sequence((time,step)=>{
+    const kv=.7+Math.random()*.3,sv=.55+Math.random()*.35,hv=.25+Math.random()*.45;
+    if(step===0||step===8)kick.triggerAttackRelease('C1','8n',time,kv);
+    if(step===4||step===12)snare.triggerAttackRelease('8n',time,sv);
+    if(step%2===0)hihat.triggerAttackRelease('32n',time,hv);
+    if(step%4===3&&Math.random()>.5)hihat.triggerAttackRelease('32n',time+.01,hv*.45);
+    if(step===0){if(bar%2===0){cur=cds[Math.floor(bar/2)%cds.length];chord.triggerAttackRelease(cur,'2n',time,.5+Math.random()*.2);bass.triggerAttackRelease(cur[0].replace(/\d+/,'')+'2','4n',time,.7+Math.random()*.3);}bar++;}
+    if(step===8&&Math.random()>.3)bass.triggerAttackRelease(cur[0].replace(/\d+/,'')+'2','8n',time,.4+Math.random()*.3);
+  },[...Array(16).keys()],'16n');
+  seq.start(0);
+}
+async function toggleMusic(){
+  const btn=document.getElementById('playBtn');
+  if(!engStarted){btn.classList.add('loading');btn.textContent='…';await buildEng(curTrack);btn.classList.remove('loading');Tone.Transport.start();engStarted=true;mPlaying=true;btn.textContent='⏸';startViz();}
+  else if(mPlaying){Tone.Transport.pause();mPlaying=false;btn.textContent='▶';stopViz();}
+  else{Tone.Transport.start();mPlaying=true;btn.textContent='⏸';startViz();}
+}
+document.getElementById('playBtn').addEventListener('click',toggleMusic);
+document.getElementById('startBtn').addEventListener('click',()=>{Tone.start().then(()=>{document.getElementById('startScreen').style.display='none';});});
+</script>
+</body>
+</html>
